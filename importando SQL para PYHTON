@@ -1,0 +1,73 @@
+# %% ---------------------- CONEXÃO COM PSYCOPG2 ----------------------
+
+# Importa bibliotecas necessárias
+import psycopg2
+import pandas as pd
+
+# Parâmetros de conexão com o banco PostgreSQL
+dbname   = 'python'
+user     = 'postgres'
+password = '7117171'
+host     = 'localhost'
+port     = '5432'
+
+# Cria a conexão utilizando psycopg2 (driver nativo do PostgreSQL)
+conexao = psycopg2.connect(
+    dbname=dbname,
+    user=user,
+    password=password,
+    host=host,
+    port=port
+)
+
+# Query SQL para extração dos dados
+query = """
+SELECT 
+    id,
+    dt_ocorrencia,
+    uf,
+    regiao,
+    classificacao_da_ocorrencia
+FROM public.anac_mapeamento
+"""
+
+# Executa a query e carrega os dados em um DataFrame
+df = pd.read_sql_query(query, conexao)
+
+# Visualiza os primeiros registros
+df.head(5)
+
+
+# %% ---------------------- CONEXÃO COM SQLALCHEMY ----------------------
+
+# Importa SQLAlchemy
+from sqlalchemy import create_engine
+import pandas as pd
+
+# Parâmetros de conexão (mesmos do psycopg2)
+dbname   = 'python'
+user     = 'postgres'
+password = '*******'
+host     = 'localhost'
+port     = '5432'
+
+# Cria a string de conexão
+conexao_str = f'postgresql://{user}:{password}@{host}:{port}/{dbname}'
+
+# Cria o engine de conexão (abstração mais avançada)
+engine = create_engine(conexao_str)
+
+# Query SQL (exemplo mais simples)
+query2 = """
+SELECT
+    id,
+    dt_ocorrencia,
+    uf
+FROM public.anac_mapeamento
+"""
+
+# Executa a query e carrega no DataFrame
+df2 = pd.read_sql_query(query2, engine)
+
+# Visualiza os dados
+df2.head(15)
