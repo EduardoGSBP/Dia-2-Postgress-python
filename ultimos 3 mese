@@ -1,0 +1,145 @@
+# %% ---------------------- IMPORTAÇÕES ----------------------
+
+# Importa bibliotecas necessárias
+from sqlalchemy import create_engine, Integer, Date, VARCHAR, text
+import pandas as pd
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+
+
+# %% ---------------------- LEITURA E PREPARAÇÃO DOS DADOS ----------------------
+
+# Configura o Pandas para exibir todas as colunas
+pd.set_option('display.max_columns', None)
+
+# Caminho do arquivo JSON de origem
+caminho_do_arquivo = r"C:\Users\edmil\OneDrive\Documentos\Cursos\Python - SGBDS - Arquivos\Origem de dados\V_OCORRENCIA_AMPLA.json"
+
+# Leitura do arquivo JSON
+df = pd.read_json(caminho_do_arquivo, encoding='utf-8-sig')
+
+# Seleção das colunas relevantes
+colunas = [
+    "Numero_da_Ocorrencia",
+    "Classificacao_da_Ocorrência",
+    "Data_da_Ocorrencia",
+    "Municipio",
+    "UF",
+    "Regiao",
+    "Nome_do_Fabricante",
+    "Modelo"
+]
+
+df = df[colunas]
+
+# Padronização do nome da coluna (remoção de acento)
+df.rename(
+    columns={'Classificacao_da_Ocorrência': 'Classificacao_da_Ocorrencia'},
+    inplace=True
+)
+
+# Visualização inicial
+df.head()
+
+# Quantidade de registros
+df.shape[0]
+
+
+# %% ---------------------- CÁLCULO DE DATA (3 MESES ATRÁS) ----------------------
+
+# Método 1 (aproximado): subtrai 90 dias
+data_atual = datetime.now()
+data_ha_3_meses = data_atual - timedelta(days=3*30)
+data_ha_3_meses_apenas_data = data_ha_3_meses.date()
+
+# Obs: não considera variação de dias por mês
+print(data_ha_3_meses_apenas_data)
+
+# Método 2 (preciso): usa relativedelta
+data_atual2 = datetime.now()
+d_menos3M = data_atual2 - relativedelta(months=3)
+dt_d_menos3M = d_menos3M.date()
+
+# Obs: considera corretamente os dias de cada mês
+print(dt_d_menos3M)
+
+
+# %% ---------------------- TRATAMENTO DE DATA ----------------------
+
+# Converte colunas para datetime (necessário para filtros)
+df['Data_da_Ocorrencia'] = pd.to_datetime(df['Data_da_Ocorrencia'])
+
+# Converte variáveis de data para datetime
+data_ha_3_meses_apenas_data = pd.to_datetime(data_ha_3_meses_apenas_data)
+dt_d_menos3M = pd.to_datetime(dt_d_menos3M)
+
+# Quantidade antes do filtro
+df.shape[0]
+
+# Filtra apenas registros dos últimos 3 meses
+df = df[df['Data_da_Ocorrencia'] >= dt_d_menos3M]
+
+# Visualiza dados filtrados
+df.head()
+
+# Ajusta para formato date (usado no SQL)
+dt_d_menos3M_ajustado = dt_d_menos3M.date()
+
+
+# %% ---------------------- CONEXÃO COM BANCO ----------------------
+
+# Parâmetros de conexão
+dbname   = 'python'
+user     = 'postgres'
+password = '12345'
+host     = 'localhost'
+port     = '5432'
+
+# Cria string de conexão
+conexao_str = f'postgresql://{user}:{password}@{host}:{port}/{dbname}'
+
+# Cria engine
+engine = create_engine(conexao_str)
+
+# Nome da tabela
+nome_tabela = 'anac_sqlalchemy'
+
+
+# %% ---------------------- REMOÇÃO DE DADOS (INCREMENTAL PARCIAL) ----------------------
+
+# Abre conexão
+cursor = engine.connect()
+
+# Remove registros dos últimos 3 meses para evitar duplicidade
+delete = text(f'''
+    DELETE FROM public.{nome_tabela}
+    WHERE "Data_da_Ocorrencia" >= '{dt_d_menos3M_ajustado}'
+''')
+
+cursor.execute(delete)
+
+# Confirma a transação
+cursor.commit()
+
+
+# %% ---------------------- CARGA DOS DADOS ----------------------
+
+# Insere os dados filtrados no banco
+df.to_sql(
+    nome_tabela,
+    engine,
+    index=False,         # Não envia índice
+    if_exists='append',  # Adiciona dados
+    dtype={
+        'Numero_da_Ocorrencia': Integer,
+        'Classificacao_da_Ocorrencia': VARCHAR(50),
+        'Data_da_Ocorrencia': Date
+    }
+)
+
+
+# %% ---------------------- FINALIZAÇÃO ----------------------
+
+# Fecha conexões
+engine.dispose()
+cursor.close()
