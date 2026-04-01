@@ -1,0 +1,122 @@
+# %% ---------------------- EXTRAÇÃO DE DADOS (SQLALCHEMY + PANDAS) ----------------------
+
+from sqlalchemy import create_engine
+import pandas as pd
+
+# Parâmetros de conexão com PostgreSQL
+dbname   = 'python'
+user     = 'postgres'
+password = '6261717'
+host     = 'localhost'
+port     = '5432'
+
+# Criação da string de conexão
+conexao_str = f'postgresql://{user}:{password}@{host}:{port}/{dbname}'
+
+# Criação do engine (abstração de conexão)
+engine = create_engine(conexao_str)
+
+# Query SQL para extração
+query = """
+SELECT 
+    id,
+    dt_ocorrencia,
+    uf,
+    regiao,
+    classificacao_da_ocorrencia
+FROM public.anac_mapeamento
+"""
+
+# Leitura da query direto para DataFrame
+df = pd.read_sql_query(query, engine)
+
+# Visualização inicial
+df.head(15)
+
+
+# %% ---------------------- EXPORTAÇÃO DE DADOS ----------------------
+
+# Caminho base (melhor prática: centralizar paths)
+base_path = r"C:\Users\Eduardo\OneDrive\Documentos\Cursos\Python - SGBDS - Arquivos\Destino"
+
+
+# %% ---------------------- EXPORTAÇÃO PARA JSON ----------------------
+
+# Orientações disponíveis:
+# - "records": lista de dicionários (mais usado em APIs)
+# - "index": estrutura baseada no índice
+# - "columns": estrutura baseada nas colunas
+# - "values": apenas valores (sem labels)
+# - "table": inclui schema (ideal para interoperabilidade)
+
+json_path = f"{base_path}\Anac.json"
+
+df.to_json(
+    json_path,
+    orient="records",   # Melhor escolha para integração com APIs
+    indent=4            # Melhor legibilidade
+)
+
+# Observação:
+# lines=True só funciona com orient="records" (JSON linha a linha)
+
+
+# %% ---------------------- EXPORTAÇÃO PARA EXCEL ----------------------
+
+excel_path = f"{base_path}\Anac.xlsx"
+
+df.to_excel(
+    excel_path,
+    index=False,        # Remove índice do pandas
+    sheet_name="Base"   # Nome da aba
+)
+
+
+# %% ---------------------- EXPORTAÇÃO PARA CSV ----------------------
+
+csv_path = f"{base_path}\Anac.csv"
+
+df.to_csv(
+    csv_path,
+    sep=',',            # Separador padrão
+    index=False
+)
+
+
+# %% ---------------------- EXPORTAÇÃO PARA PARQUET ----------------------
+
+# Requer:
+# pip install pyarrow  OU  pip install fastparquet
+
+parquet_path = f"{base_path}\Anac.parquet"
+
+df.to_parquet(
+    parquet_path,
+    index=False,
+    engine='pyarrow'    # Melhor performance e compatibilidade
+)
+
+
+# %% ---------------------- PARQUET PARTICIONADO (DATA ENGINEERING REAL) ----------------------
+
+# Particionamento melhora performance em consultas analíticas (ex: Spark, Athena)
+
+parquet_partitioned_path = f"{base_path}\Anac_particionado.parquet"
+
+colunas_particionamento = ['regiao', 'uf']
+
+df.to_parquet(
+    parquet_partitioned_path,
+    index=False,
+    partition_cols=colunas_particionamento,
+    engine='pyarrow'
+)
+
+
+# %% ---------------------- EXPLORAÇÃO RÁPIDA ----------------------
+
+# Visualizar dados
+df.head()
+
+# Listar colunas
+df.columns
