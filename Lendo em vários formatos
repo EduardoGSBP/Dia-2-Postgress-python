@@ -1,0 +1,79 @@
+# %%
+import pandas as pd
+
+# %% [markdown]
+# https://pandas.pydata.org/docs/reference/api/pandas.read_json.html
+
+# %%
+# JSON
+pasta_origem_json = r"C:\Users\Eduardo\OneDrive\Documentos\Curso\Arquivos\01. Postgree\Origem de dados\V_OCORRENCIA_AMPLA.json"
+df_json=pd.read_json(pasta_origem_json,orient="index")
+df_json.head()
+
+# %% [markdown]
+# https://pandas.pydata.org/docs/reference/api/pandas.read_excel.html
+
+# %%
+#Excel
+pasta_origem_excel = r"CC:\Users\Eduardo\OneDrive\Documentos\Curso\Python - SGBDS - Arquivos\Destino\Anac.xlsx"
+df_excel=pd.read_excel(pasta_origem_excel)
+df_excel.head()
+#sheet_name = guia da planila
+#index = indice do python
+
+# %% [markdown]
+# https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html
+
+# %%
+#CSV
+pasta_origem_csv = r"C:\Users\Eduardo\OneDrive\Documentos\Curso\Python - SGBDS - Arquivos\Destino\Anac.csv"
+df_csv=pd.read_csv(pasta_origem_csv,sep=',')
+df_csv.head()
+#sep=  separador (delimitador)
+
+
+# %% [markdown]
+# https://pandas.pydata.org/docs/reference/api/pandas.read_parquet.html
+
+# %%
+#Parquet
+pasta_origem_parquet = r"C:\Users\Eduardo\OneDrive\Documentos\Curso\Python - SGBDS - Arquivos\Destino\Anac.parquet"
+df_parquet=pd.read_parquet(pasta_origem_parquet)
+df_parquet.head()
+#engine="pyarrow"
+#engine="fastparquet"
+
+# %%
+#Parquet Particionado
+#pip install --upgrade pyarrow
+#pip install --upgrade fastparquet
+
+pasta_origem_parquet = r"C:\Users\Eduardo\OneDrive\Documentos\Curso\Python - SGBDS - Arquivos\Destino\Anac_particonado.parquet"
+df_parquet_particionado=pd.read_parquet(pasta_origem_parquet,engine="fastparquet")
+df_parquet_particionado.head()
+
+# %%
+
+#Parquet Particionado somente uma particao e nao um todo
+pasta_origem_parquet_regiao = r"C:\Users\Eduardo\OneDrive\Documentos\Curso\Python - SGBDS - Arquivos\Destino\Anac_particonado.parquet\regiao=Sudeste\uf=MG"
+df_parquet_mg = pd.read_parquet(pasta_origem_parquet_regiao,engine="fastparquet")
+df_parquet_mg.head()
+
+
+# %%
+import os
+
+pasta_principal = r"C:\Users\Eduardo\OneDrive\Documentos\Curso\Python - SGBDS - Arquivos\Destino\Anac_particonado.parquet\regiao=Sudeste"
+df_final = [] # df vazio para receber os dados 
+
+for pasta_regiao in os.listdir(pasta_principal):    
+    caminho_particao_estado = os.path.join(pasta_principal, pasta_regiao)      
+    df_estado = pd.read_parquet(caminho_particao_estado, engine="fastparquet") 
+    df_final.append(df_estado)
+
+
+df_completo_sudeste = pd.concat(df_final, ignore_index=True)
+df_completo_sudeste.head()
+
+
+
